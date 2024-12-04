@@ -147,11 +147,12 @@ public class BrokerCommandHandler implements Runnable {
             return exchanges.get(command[2]);
         }
 
-        Exchange exchange = new Exchange(e, queues, new ConcurrentHashMap<>());
-        exchanges.put(command[2], exchange);
+        exchanges.computeIfAbsent(command[2], k -> new Exchange(e, queues, new ConcurrentHashMap<>()));
+        //Exchange exchange = new Exchange(e, queues, new ConcurrentHashMap<>());
+        //exchanges.put(command[2], exchange);
         out.write("ok\n".getBytes());
         out.flush();
-        return exchange;
+        return exchanges.get(command[2]);
     }
 
     private String queue(String[] command, Exchange currentExchange, OutputStream out) throws Exception {
