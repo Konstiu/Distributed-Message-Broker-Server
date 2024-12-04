@@ -1,9 +1,14 @@
 package dslab.broker;
 
+import dslab.config.BrokerConfig;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.List;
@@ -19,13 +24,15 @@ public class BrokerCommandHandler implements Runnable {
     private volatile List<Queue> queues;
     private volatile AtomicReference<String> bind;
     private volatile AtomicReference<Exchange> lastExchange;
+    private final BrokerConfig config;
 
-    public BrokerCommandHandler(Socket socket, ConcurrentHashMap<String, Exchange> exchanges, List<Queue> queues, AtomicReference<String> bind, AtomicReference<Exchange> exchange) {
+    public BrokerCommandHandler(Socket socket, ConcurrentHashMap<String, Exchange> exchanges, List<Queue> queues, AtomicReference<String> bind, AtomicReference<Exchange> exchange, BrokerConfig config) {
         this.socket = socket;
         this.exchanges = exchanges;
         this.queues = queues;
         this.bind = bind;
         this.lastExchange = exchange;
+        this.config = config;
     }
 
     @Override
@@ -92,6 +99,7 @@ public class BrokerCommandHandler implements Runnable {
             out.flush();
             String msg = String.join(" ", Arrays.copyOfRange(command, 2, command.length));
             currentExchange.publish(command[1], msg);
+            sendMsgToMonitoringServer(command[1]);
         } else {
             out.write("error no exchange declared\n".getBytes());
             out.flush();
@@ -199,5 +207,18 @@ public class BrokerCommandHandler implements Runnable {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void sendMsgToMonitoringServer(String key) {
+        try (DatagramSocket socket = new DatagramSocket()) {
+            String msg = config.host() + ":" + config.port() + " " + key;
+            byte[] data = msg.getBytes();
+            InetAddress address = InetAddress.getByName(config.monitoringHost());
+            DatagramPacket packet = new DatagramPacket(data, data.length, address, config.monitoringPort());
+            socket.send(packet);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
     }
 }

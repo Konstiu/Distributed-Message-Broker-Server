@@ -41,7 +41,7 @@ public class Broker implements IBroker {
             while (!serverSocket.isClosed()) {
                 Socket socket = serverSocket.accept();
                 sockets.add(socket);
-                executor.submit(new BrokerCommandHandler(socket, exchanges, queues, bind, test));
+                executor.submit(new BrokerCommandHandler(socket, exchanges, queues, bind, test, config));
             }
 
         } catch (Exception e) {
