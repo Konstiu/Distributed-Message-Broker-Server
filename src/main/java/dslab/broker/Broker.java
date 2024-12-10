@@ -20,6 +20,7 @@ public class Broker implements IBroker {
     private ServerSocket serverSocket;
     private volatile boolean running = true;
     private List<Socket> sockets = new ArrayList<>();
+    private Election election;
 
     public Broker(BrokerConfig config) {
         this.config = config;
@@ -28,6 +29,10 @@ public class Broker implements IBroker {
     @Override
     public void run() {
         try {
+            //ExecutorService election = Executors.newVirtualThreadPerTaskExecutor();
+            this.election = new Election(config);
+            Thread.startVirtualThread(this.election);
+
             dnsClient = Thread.startVirtualThread(new DNSClient(config));
             executor = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -54,7 +59,7 @@ public class Broker implements IBroker {
 
     @Override
     public int getId() {
-        return 0;
+        return config.electionId();
     }
 
     @Override
@@ -64,7 +69,7 @@ public class Broker implements IBroker {
 
     @Override
     public int getLeader() {
-        return 0;
+        return this.election.getLeader();
     }
 
     @Override
@@ -84,6 +89,7 @@ public class Broker implements IBroker {
                 throw new RuntimeException(e);
             }
         }
+        this.election.shutdown();
     }
 
     public static void main(String[] args) {

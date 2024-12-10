@@ -217,7 +217,9 @@ public class BrokerCommandHandler implements Runnable {
             DatagramPacket packet = new DatagramPacket(data, data.length, address, config.monitoringPort());
             socket.send(packet);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (config.monitoringPort() != 0) {
+                throw new RuntimeException(e);
+            }
         }
 
     }
