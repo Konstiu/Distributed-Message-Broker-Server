@@ -53,8 +53,8 @@ public class CommandBuilder {
         return "ack %d".formatted(id);
     }
 
-    public static String vote(int senderId, int candicateId) {
-        return "vote %d %d".formatted(senderId, candicateId);
+    public static String vote(int senderId, int candidateId) {
+        return "vote %d %d".formatted(senderId, candidateId);
     }
 
     public static String ping() {

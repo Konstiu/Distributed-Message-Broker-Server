@@ -68,7 +68,7 @@ public class BullyElectionIntegrationTest extends BaseElectionIntegrationTest {
         int deadLeaderIndex = ElectionUtil.shutdownLeader(brokers, brokerIds.getLast());
         IBroker[] aliveBrokers = ElectionUtil.getAliveBrokers(brokers, deadLeaderIndex);
 
-        waitForElectionToEnd(aliveBrokers, brokerIds.removeLast());
+        waitForElectionToEnd(aliveBrokers, brokerIds.removeLast(), brokerConfigs[0].electionHeartbeatTimeoutMs());
 
         for (IBroker aliveBroker : aliveBrokers) assertThat(aliveBroker.getLeader()).isEqualTo(brokerIds.getLast());
 

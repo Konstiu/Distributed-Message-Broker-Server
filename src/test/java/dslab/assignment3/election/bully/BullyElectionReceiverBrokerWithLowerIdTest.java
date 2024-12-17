@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 
 import static dslab.util.CommandBuilder.declare;
 import static dslab.util.CommandBuilder.elect;
-import static dslab.util.CommandBuilder.ok;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -55,14 +54,13 @@ public class BullyElectionReceiverBrokerWithLowerIdTest extends BaseElectionRece
     @Test
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void bully_initiatesElection_initiatesNewElection_doesNotBecomeLeader() throws InterruptedException {
-        receivers[0].setExpectedMessage(elect(BROKER_ELECTION_ID));
-        receivers[0].setResponse(ok());
+        receivers[0].expectElect(BROKER_ELECTION_ID);
 
         broker.initiateElection();
 
         // only receivers-0 should receive a elect statement (receiver-0 has a higher id)
         assertEquals(elect(BROKER_ELECTION_ID), receivers[0].takeMessage());
-        assertThat(receivers[1].numberOfReceivedMsg()).isEqualTo(0);
+        assertThat(receivers[1].receivedMessagesSize()).isEqualTo(0);
 
         assertThat(broker.getLeader()).isLessThan(0);
     }
@@ -74,21 +72,20 @@ public class BullyElectionReceiverBrokerWithLowerIdTest extends BaseElectionRece
         sender.connectAndReadResponse();
         sender.sendCommandAndReadResponse(elect(BROKER_ELECTION_ID + 1));
 
-        for (int i = 0; i < numOfReceivers; i++) assertEquals(0, receiver.numberOfReceivedMsg());
+        for (int i = 0; i < numOfReceivers; i++) assertEquals(0, receiver.receivedMessagesSize());
     }
 
     @GitHubClassroomGrading(maxScore = 3)
     @Test
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void bully_receivesElectOfLowerId_initiatesNewElection_doesNotBecomeLeader() throws IOException, InterruptedException {
-        receivers[0].setExpectedMessage(elect(BROKER_ELECTION_ID));
-        receivers[0].setResponse(ok());
+        receivers[0].expectElect(BROKER_ELECTION_ID);
 
         sender.connectAndReadResponse();
         sender.sendCommandAndReadResponse(elect(BROKER_ELECTION_ID - 1));
 
         assertEquals(elect(BROKER_ELECTION_ID), receivers[0].takeMessage());
-        assertThat(receivers[1].numberOfReceivedMsg()).isEqualTo(0);
+        assertThat(receivers[1].receivedMessagesSize()).isEqualTo(0);
 
         assertThat(broker.getLeader()).isLessThan(0);
     }
@@ -109,10 +106,9 @@ public class BullyElectionReceiverBrokerWithLowerIdTest extends BaseElectionRece
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void bully_reachesTimeout_initiatesNewElection() throws InterruptedException {
-        receivers[0].setExpectedMessage(elect(BROKER_ELECTION_ID));
-        receivers[0].setResponse(ok());
+        receivers[0].expectElect(BROKER_ELECTION_ID);
 
         assertEquals(elect(BROKER_ELECTION_ID), receivers[0].takeMessage());
-        assertThat(receivers[1].numberOfReceivedMsg()).isEqualTo(0);
+        assertThat(receivers[1].receivedMessagesSize()).isEqualTo(0);
     }
 }

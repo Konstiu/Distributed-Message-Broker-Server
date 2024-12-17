@@ -21,9 +21,9 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class BaseElectionReceiverTest implements BaseElectionTest {
 
-    protected static final int BROKER_ELECTION_ID = 100;
+    protected static final int BROKER_ELECTION_ID = Global.SECURE_INT_GENERATOR.getInt(10, 100);
 
-    protected int numOfReceivers = getNumOfReceivers();
+    protected final int numOfReceivers = getNumOfReceivers();
 
     protected final int[] receiverPorts = createReceiverPorts(numOfReceivers);
     protected final int[] receiverIds = createReceiverIDs(numOfReceivers);
@@ -58,7 +58,7 @@ public abstract class BaseElectionReceiverTest implements BaseElectionTest {
         receivers = new MockServer[numOfReceivers];
         receiverThreads = new Thread[numOfReceivers];
         for (int i = 0; i < numOfReceivers; i++) {
-            receivers[i] = new MockServer(receiverPorts[i]);
+            receivers[i] = new MockServer(receiverPorts[i], receiverIds[i]);
             receiverThreads[i] = new Thread(receivers[i]);
             receiverThreads[i].start();
         }
@@ -92,9 +92,9 @@ public abstract class BaseElectionReceiverTest implements BaseElectionTest {
             broker.shutdown();
         }
 
-        for (int i = 0; i < receivers.length; i++) {
-            if (receivers[i] != null) {
-                receivers[i].shutdown();
+        for (MockServer mockServer : receivers) {
+            if (mockServer != null) {
+                mockServer.shutdown();
             }
         }
 

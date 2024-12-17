@@ -36,15 +36,17 @@ public class BullyElectionProtocolTest extends BaseElectionProtocolTest {
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void bully_elect_successfully() throws IOException {
         sender.connectAndReadResponse();
-        assertEquals(ok(), sender.sendCommandAndReadResponse(elect(1)));
+        assertEquals(ok(), sender.sendCommandAndReadResponse(elect(config.electionPeerIds()[1])));
     }
 
     @GitHubClassroomGrading(maxScore = 2)
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void bully_declare_successfully() throws IOException {
+        final int leaderId = config.electionPeerIds()[1];
+
         sender.connectAndReadResponse();
-        assertThat(sender.sendCommandAndReadResponse(declare(10))).contains("ack");
-        assertEquals(10, broker.getLeader());
+        assertThat(sender.sendCommandAndReadResponse(declare(leaderId))).contains("ack");
+        assertEquals(leaderId, broker.getLeader());
     }
 }

@@ -93,7 +93,7 @@
                             <goal>java</goal>
                         </goals>
                         <configuration>
-                            <mainClass>dslab.dns.DNSServer</mainClass>
+                            <mainClass>dslab.monitoring.MonitoringServer</mainClass>
                             <arguments>
                                 <argument>monitoring-0</argument>
                             </arguments>

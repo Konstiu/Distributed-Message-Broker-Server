@@ -14,9 +14,9 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
-import static dslab.util.CommandBuilder.ack;
 import static dslab.util.CommandBuilder.declare;
 import static dslab.util.CommandBuilder.elect;
+import static dslab.util.CommandBuilder.ok;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -41,26 +41,38 @@ public class RingElectionSingleReceiverTest extends BaseElectionReceiverTest {
         return 1;
     }
 
-    public static Stream<Arguments> source_ring_receivesElectOfHigherId_forwardsElect() {
+    public static Stream<Arguments> source_ring_receivesElectOfDifferentId_forwardsElect() {
         return Stream.of(
-                Arguments.of(elect(BROKER_ELECTION_ID - 1), elect(BROKER_ELECTION_ID)), // MB receives lower id --> propagate your own id
-                Arguments.of(elect(BROKER_ELECTION_ID + 1), elect(BROKER_ELECTION_ID + 1)), // MB receives higher id --> propagate received id
-                Arguments.of(elect(BROKER_ELECTION_ID), declare(BROKER_ELECTION_ID)) // MB receives its own id
+                // MB receives lower id --> propagate your own id
+                Arguments.of(elect(BROKER_ELECTION_ID - 1), elect(BROKER_ELECTION_ID)),
+                // MB receives higher id --> propagate received id
+                Arguments.of(elect(BROKER_ELECTION_ID + 1), elect(BROKER_ELECTION_ID + 1))
         );
     }
 
-    @GitHubClassroomGrading(maxScore = 2)
+    @GitHubClassroomGrading(maxScore = 1)
     @ParameterizedTest
-    @MethodSource("source_ring_receivesElectOfHigherId_forwardsElect")
+    @MethodSource("source_ring_receivesElectOfDifferentId_forwardsElect")
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
-    void ring_receivesElectOfHigherId_forwardsElect(String msgSendToBroker, String expectedMsgSentByBroker) throws IOException, InterruptedException {
-        receiver.setExpectedMessage(expectedMsgSentByBroker);
-        receiver.setResponse("ok");
+    void ring_receivesElectOfDifferentId_forwardsElect(String msgSendToBroker, String expectedMsgSentByBroker) throws IOException, InterruptedException {
+        receiver.setExpectationAndResponse(expectedMsgSentByBroker, ok());
 
         sender.connectAndReadResponse();
         sender.sendCommandAndReadResponse(msgSendToBroker);
 
         assertEquals(expectedMsgSentByBroker, receiver.takeMessage());
+    }
+
+    @GitHubClassroomGrading(maxScore = 1)
+    @Test
+    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
+    void ring_receivesElectOfOwnId_forwardsDeclare() throws IOException, InterruptedException {
+        receiver.expectDeclare(BROKER_ELECTION_ID);
+
+        sender.connectAndReadResponse();
+        sender.sendCommandAndReadResponse(elect(BROKER_ELECTION_ID));
+
+        assertEquals(declare(BROKER_ELECTION_ID), receiver.takeMessage());
     }
 
     @GitHubClassroomGrading(maxScore = 2)
@@ -94,8 +106,7 @@ public class RingElectionSingleReceiverTest extends BaseElectionReceiverTest {
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void ring_receivesDeclareOfHigherId_forwardsDeclare() throws IOException, InterruptedException {
         final int leaderId = BROKER_ELECTION_ID + 1;
-        receiver.setExpectedMessage(declare(leaderId));
-        receiver.setResponse(ack(BROKER_ELECTION_ID - 1));
+        receiver.expectDeclare(leaderId);
 
         sender.connectAndReadResponse();
         sender.sendCommandAndReadResponse(declare(leaderId));
@@ -109,22 +120,20 @@ public class RingElectionSingleReceiverTest extends BaseElectionReceiverTest {
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void ring_receivesDeclareOfOwnId_doesNotForwardDeclare() throws IOException {
         final int leaderId = BROKER_ELECTION_ID;
-        receiver.setExpectedMessage(declare(leaderId));
-        receiver.setResponse(ack(BROKER_ELECTION_ID - 1));
+        receiver.expectDeclare(leaderId);
 
         sender.connectAndReadResponse();
         sender.sendCommandAndReadResponse(declare(leaderId));
 
         // Check that MB did not forward the declare msg
-        assertEquals(0, receiver.numberOfReceivedMsg());
+        assertEquals(0, receiver.receivedNonPingMessagesSize());
     }
 
     @GitHubClassroomGrading(maxScore = 2)
     @Test
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void ring_initiatesElection_sendsElectMessageToNextPeer() throws InterruptedException {
-        receiver.setExpectedMessage(elect(BROKER_ELECTION_ID));
-        receiver.setResponse("ok");
+        receiver.expectElect(BROKER_ELECTION_ID);
 
         broker.initiateElection();
 
@@ -137,13 +146,11 @@ public class RingElectionSingleReceiverTest extends BaseElectionReceiverTest {
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void ring_reachesTimeout_initiatesNewElection() throws InterruptedException {
         final int leaderId = BROKER_ELECTION_ID;
-        receiver.setExpectedMessage(elect(leaderId));
-        receiver.setResponse("ok");
+        receiver.expectElect(leaderId);
 
         // broker should realise that there is no leader by running into the timeout and start a new election
 
         // Check that MB did not forward the declare msg
         assertEquals(elect(leaderId), receiver.takeMessage());
     }
-
 }

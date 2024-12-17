@@ -78,7 +78,7 @@ public class RingElectionIntegrationTest extends BaseElectionIntegrationTest {
         IBroker[] aliveBrokers = ElectionUtil.getAliveBrokers(brokers, deadLeaderIndex);
 
         // wait for followers to timeout --> they start a new election
-        waitForElectionToEnd(aliveBrokers, brokerIds.removeLast());
+        waitForElectionToEnd(aliveBrokers, brokerIds.removeLast(), brokerConfigs[0].electionHeartbeatTimeoutMs());
 
         // Make sure that a new leader has been elected
         for (IBroker aliveBroker : aliveBrokers) assertThat(aliveBroker.getLeader()).isEqualTo(brokerIds.getLast());

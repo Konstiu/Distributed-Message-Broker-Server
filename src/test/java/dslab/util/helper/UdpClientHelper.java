@@ -1,7 +1,10 @@
 package dslab.util.helper;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.net.SocketException;
 
 public class UdpClientHelper {
 
@@ -22,6 +25,6 @@ public class UdpClientHelper {
     }
 
     public void disconnect() {
-        if (socket != null && !socket.isClosed()) socket.close();
+        if (!socket.isClosed()) socket.close();
     }
 }

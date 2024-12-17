@@ -2,8 +2,6 @@ name: DSLab Autograding Workflow
 
 'on':
   push:
-    paths-ignore:
-      - 'DSlab_2024_Assignment_3.pdf'
     branches:
       - main
 
@@ -329,15 +327,25 @@ jobs:
           timeout: 1
           max-score: 2
 
-      - name: Test ring_receivesElectOfHigherId_forwardsElect
-        id: ring_receivesElectOfHigherId_forwardsElect
+      - name: Test ring_receivesElectOfDifferentId_forwardsElect
+        id: ring_receivesElectOfDifferentId_forwardsElect
         uses: classroom-resources/autograding-command-grader@v1
         with:
-          test-name: ring_receivesElectOfHigherId_forwardsElect
+          test-name: ring_receivesElectOfDifferentId_forwardsElect
           setup-command: ''
-          command: mvn test -Dtest=dslab.assignment3.election.ring.RingElectionSingleReceiverTest#ring_receivesElectOfHigherId_forwardsElect
+          command: mvn test -Dtest=dslab.assignment3.election.ring.RingElectionSingleReceiverTest#ring_receivesElectOfDifferentId_forwardsElect
           timeout: 1
-          max-score: 2
+          max-score: 1
+
+      - name: Test ring_receivesElectOfOwnId_forwardsDeclare
+        id: ring_receivesElectOfOwnId_forwardsDeclare
+        uses: classroom-resources/autograding-command-grader@v1
+        with:
+          test-name: ring_receivesElectOfOwnId_forwardsDeclare
+          setup-command: ''
+          command: mvn test -Dtest=dslab.assignment3.election.ring.RingElectionSingleReceiverTest#ring_receivesElectOfOwnId_forwardsDeclare
+          timeout: 1
+          max-score: 1
 
       - name: Test ring_receivesElectOfOwnId_setsItselfAsLeader
         id: ring_receivesElectOfOwnId_setsItselfAsLeader
@@ -451,7 +459,8 @@ jobs:
           RING_PROTOCOL_DECLARE_SUCCESSFULLY_RESULTS: ${{steps.ring_protocol_declare_successfully.outputs.result}}
           RING_PROTOCOL_DECLARE_INVALIDSYNTAX_RESULTS: ${{steps.ring_protocol_declare_invalidSyntax.outputs.result}}
           RING_PROTOCOL_PING_SUCCESSFULLY_RESULTS: ${{steps.ring_protocol_ping_successfully.outputs.result}}
-          RING_RECEIVESELECTOFHIGHERID_FORWARDSELECT_RESULTS: ${{steps.ring_receivesElectOfHigherId_forwardsElect.outputs.result}}
+          RING_RECEIVESELECTOFDIFFERENTID_FORWARDSELECT_RESULTS: ${{steps.ring_receivesElectOfDifferentId_forwardsElect.outputs.result}}
+          RING_RECEIVESELECTOFOWNID_FORWARDSDECLARE_RESULTS: ${{steps.ring_receivesElectOfOwnId_forwardsDeclare.outputs.result}}
           RING_RECEIVESELECTOFOWNID_SETSITSELFASLEADER_RESULTS: ${{steps.ring_receivesElectOfOwnId_setsItselfAsLeader.outputs.result}}
           RING_RECEIVESDECLAREOFDIFFERENTID_SETSRECEIVEDIDASLEADER_RESULTS: ${{steps.ring_receivesDeclareOfDifferentId_setsReceivedIdAsLeader.outputs.result}}
           RING_RECEIVESDECLAREOFHIGHERID_FORWARDSDECLARE_RESULTS: ${{steps.ring_receivesDeclareOfHigherId_forwardsDeclare.outputs.result}}
@@ -461,4 +470,4 @@ jobs:
           MONITORING_MESSAGEBROKERSENDSMONITORINGDATAUPONRECEIVINGMESSAGE_RESULTS: ${{steps.monitoring_messageBrokerSendsMonitoringDataUponReceivingMessage.outputs.result}}
           MONITORING_SENDINGMESSAGES_RETURNSCORRECTSTATISTICS_RESULTS: ${{steps.monitoring_sendingMessages_returnsCorrectStatistics.outputs.result}}
         with:
-          runners: bully_electsLeader_successfully,bully_currentLeaderShutsDown_electsNewLeader_successfully,bully_elect_successfully,bully_declare_successfully,bully_initiatesElection_sendsElectMessageToPeers_becomesLeader,bully_receivesElectOfLowerId_initiatesNewElection_becomesLeader_sendsDeclare,bully_becomesLeader_startsSendingHeartbeatsToPeers,bully_initiatesElection_initiatesNewElection_doesNotBecomeLeader,bully_receivesElectOfHigherId_doesNotInitiateElection,bully_receivesElectOfLowerId_initiatesNewElection_doesNotBecomeLeader,bully_receivesDeclare_setsLeaderId,bully_reachesTimeout_initiatesNewElection,raft_electsLeader_successfully,raft_currentLeaderShutsDown_electsNewLeader_successfully,raft_protocol_declare_successfully,raft_protocol_ping_successfully,raft_initiatesElection_sendsElectMessageToPeers_becomesLeader,raft_initiatesElection_sendsElectMessageToPeers_doesNotBecomeLeader,raft_reachesTimeout_initiatesNewElection,raft_becomesLeader_startsSendingHeartbeatsToPeers,ring_electsLeader_successfully,ring_currentLeaderShutsDown_electsNewLeader_successfully,ring_becomesLeader_startsSendingHeartbeatsToPeers,ring_protocol_connectsReceivesGreeting_successfully,ring_protocol_elect_successfully,ring_protocol_elect_invalidSyntax,ring_protocol_declare_successfully,ring_protocol_declare_invalidSyntax,ring_protocol_ping_successfully,ring_receivesElectOfHigherId_forwardsElect,ring_receivesElectOfOwnId_setsItselfAsLeader,ring_receivesDeclareOfDifferentId_setsReceivedIdAsLeader,ring_receivesDeclareOfHigherId_forwardsDeclare,ring_receivesDeclareOfOwnId_doesNotForwardDeclare,ring_initiatesElection_sendsElectMessageToNextPeer,ring_reachesTimeout_initiatesNewElection,monitoring_messageBrokerSendsMonitoringDataUponReceivingMessage,monitoring_sendingMessages_returnsCorrectStatistics
+          runners: bully_electsLeader_successfully,bully_currentLeaderShutsDown_electsNewLeader_successfully,bully_elect_successfully,bully_declare_successfully,bully_initiatesElection_sendsElectMessageToPeers_becomesLeader,bully_receivesElectOfLowerId_initiatesNewElection_becomesLeader_sendsDeclare,bully_becomesLeader_startsSendingHeartbeatsToPeers,bully_initiatesElection_initiatesNewElection_doesNotBecomeLeader,bully_receivesElectOfHigherId_doesNotInitiateElection,bully_receivesElectOfLowerId_initiatesNewElection_doesNotBecomeLeader,bully_receivesDeclare_setsLeaderId,bully_reachesTimeout_initiatesNewElection,raft_electsLeader_successfully,raft_currentLeaderShutsDown_electsNewLeader_successfully,raft_protocol_declare_successfully,raft_protocol_ping_successfully,raft_initiatesElection_sendsElectMessageToPeers_becomesLeader,raft_initiatesElection_sendsElectMessageToPeers_doesNotBecomeLeader,raft_reachesTimeout_initiatesNewElection,raft_becomesLeader_startsSendingHeartbeatsToPeers,ring_electsLeader_successfully,ring_currentLeaderShutsDown_electsNewLeader_successfully,ring_becomesLeader_startsSendingHeartbeatsToPeers,ring_protocol_connectsReceivesGreeting_successfully,ring_protocol_elect_successfully,ring_protocol_elect_invalidSyntax,ring_protocol_declare_successfully,ring_protocol_declare_invalidSyntax,ring_protocol_ping_successfully,ring_receivesElectOfDifferentId_forwardsElect,ring_receivesElectOfOwnId_forwardsDeclare,ring_receivesElectOfOwnId_setsItselfAsLeader,ring_receivesDeclareOfDifferentId_setsReceivedIdAsLeader,ring_receivesDeclareOfHigherId_forwardsDeclare,ring_receivesDeclareOfOwnId_doesNotForwardDeclare,ring_initiatesElection_sendsElectMessageToNextPeer,ring_reachesTimeout_initiatesNewElection,monitoring_messageBrokerSendsMonitoringDataUponReceivingMessage,monitoring_sendingMessages_returnsCorrectStatistics

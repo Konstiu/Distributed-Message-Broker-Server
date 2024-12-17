@@ -9,22 +9,35 @@ import java.net.Socket;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import static dslab.util.CommandBuilder.ack;
+import static dslab.util.CommandBuilder.declare;
+import static dslab.util.CommandBuilder.elect;
+import static dslab.util.CommandBuilder.ok;
+import static dslab.util.CommandBuilder.ping;
+import static dslab.util.CommandBuilder.pong;
+import static dslab.util.CommandBuilder.vote;
+
 /**
  * Only supports a single connection
  */
 public class MockServer implements Runnable {
 
     private static final String ERROR_RESPONSE = "INVALID MESSAGE RECEIVED";
+    private static final String DEFAULT_EXPECTED_MESSAGE = "EXPECTED MESSAGE NOT SET, PLEASE SET A EXPECTED MESSAGE";
+    private static final String DEFAULT_RESPONSE = "EXPECTED MESSAGE NOT SET, PLEASE SET A EXPECTED MESSAGE";
 
     private ServerSocket socket;
+    private final int electionId;
     private final int port;
     private final BlockingQueue<String> receivedMessages = new LinkedBlockingQueue<>();
+    private final BlockingQueue<String> receivedNonPingMessages = new LinkedBlockingQueue<>();
 
-    private String expectedMessage = "EXPECTED MESSAGE NOT SET";
-    private String response = "RESPONSE NOT SET";
+    private String expectedMessage = DEFAULT_EXPECTED_MESSAGE;
+    private String response = DEFAULT_RESPONSE;
 
-    public MockServer(int port) {
+    public MockServer(int port, int electionId) {
         this.port = port;
+        this.electionId = electionId;
     }
 
     @Override
@@ -32,31 +45,26 @@ public class MockServer implements Runnable {
         try (ServerSocket socket = new ServerSocket(port)) {
             this.socket = socket;
 
-            while (true) {
+            while (!socket.isClosed()) {
                 Socket conn = socket.accept();
                 handleConnection(conn);
             }
         } catch (IOException e) {
             // ignored
-        } finally {
-            shutdown();
         }
     }
 
-    private void handleConnection(Socket conn) throws IOException {
-        try (conn;
-             BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-             PrintStream out = new PrintStream(conn.getOutputStream(), true)) {
-
+    private void handleConnection(Socket conn) {
+        try (
+                conn;
+                BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                PrintStream out = new PrintStream(conn.getOutputStream(), true)
+        ) {
 
             out.println("ok LEP");
-            while (true) {
-                boolean ok = handleInput(in, out);
-
-                // Closes the socket on exit or protocol error
-                if (!ok) {
-                    break;
-                }
+            boolean ok = true;
+            while (!conn.isClosed() && ok) {
+                ok = handleInput(in, out);
             }
 
         } catch (IOException e) {
@@ -64,18 +72,22 @@ public class MockServer implements Runnable {
         }
     }
 
-    private boolean handleInput(BufferedReader in , PrintStream out) throws IOException {
+    private boolean handleInput(BufferedReader in, PrintStream out) throws IOException {
         String read = in.readLine();
 
-        if (read == null) return false;
+        if (read == null || read.isBlank()) return false;
 
         receivedMessages.add(read);
 
-        // No answer if response is set to blank
-        if (response.isBlank()) return true;
+        if (!read.equals(ping()) || !read.equals(pong())) receivedNonPingMessages.add(read);
 
-        if (expectedMessage.equals("EXPECTED MESSAGE NOT SET")) {
-            out.println("EXPECTED MESSAGE NOT SET, PLEASE SET A EXPECTED MESSAGE");
+        if (ping().equals(read)) {
+            out.println(pong());
+            return true;
+        }
+
+        if (expectedMessage.equals(DEFAULT_EXPECTED_MESSAGE)) {
+            out.println(DEFAULT_RESPONSE);
             return false;
         }
 
@@ -104,15 +116,36 @@ public class MockServer implements Runnable {
         return receivedMessages.toString();
     }
 
-    public int numberOfReceivedMsg() {
+    public int receivedMessagesSize() {
         return receivedMessages.size();
     }
 
-    public void setExpectedMessage(String expectedMessage) {
-        this.expectedMessage = expectedMessage;
+    public int receivedNonPingMessagesSize() {
+        return receivedNonPingMessages.size();
     }
 
-    public void setResponse(String response) {
+    public void expectElect(int id) {
+        this.expectedMessage = elect(id);
+        this.response = ok();
+    }
+
+    public void expectElect(int electId, int candidateId) {
+        this.expectedMessage = elect(electId);
+        this.response = vote(electionId, candidateId);
+    }
+
+    public void expectDeclare(int id) {
+        this.expectedMessage = declare(id);
+        this.response = ack(electionId);
+    }
+
+    public void expectPing() {
+        this.expectedMessage = "ping";
+        this.response = "pong";
+    }
+
+    public void setExpectationAndResponse(String expectedMessage, String response) {
+        this.expectedMessage = expectedMessage;
         this.response = response;
     }
 }
