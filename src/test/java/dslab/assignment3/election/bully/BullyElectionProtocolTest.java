@@ -10,9 +10,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import static dslab.util.CommandBuilder.OK;
 import static dslab.util.CommandBuilder.declare;
 import static dslab.util.CommandBuilder.elect;
-import static dslab.util.CommandBuilder.ok;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -36,7 +36,7 @@ public class BullyElectionProtocolTest extends BaseElectionProtocolTest {
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void bully_elect_successfully() throws IOException {
         sender.connectAndReadResponse();
-        assertEquals(ok(), sender.sendCommandAndReadResponse(elect(config.electionPeerIds()[1])));
+        assertEquals(OK, sender.sendCommandAndReadResponse(elect(config.electionPeerIds()[1])));
     }
 
     @GitHubClassroomGrading(maxScore = 2)

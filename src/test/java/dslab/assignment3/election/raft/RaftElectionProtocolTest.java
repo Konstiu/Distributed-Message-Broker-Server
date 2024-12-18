@@ -10,9 +10,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import static dslab.util.CommandBuilder.PING;
+import static dslab.util.CommandBuilder.PONG;
 import static dslab.util.CommandBuilder.declare;
-import static dslab.util.CommandBuilder.ping;
-import static dslab.util.CommandBuilder.pong;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -41,7 +41,7 @@ public class RaftElectionProtocolTest extends BaseElectionProtocolTest {
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void raft_protocol_ping_successfully() throws IOException {
         sender.connectAndReadResponse();
-        assertEquals(pong(), sender.sendCommandAndReadResponse(ping()));
+        assertEquals(PONG, sender.sendCommandAndReadResponse(PING));
     }
 
     @Override

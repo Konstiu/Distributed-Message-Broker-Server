@@ -9,11 +9,11 @@ import org.junit.jupiter.api.Timeout;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import static dslab.util.CommandBuilder.EXIT;
+import static dslab.util.CommandBuilder.SUBSCRIBE;
 import static dslab.util.CommandBuilder.bind;
 import static dslab.util.CommandBuilder.exchange;
-import static dslab.util.CommandBuilder.exit;
 import static dslab.util.CommandBuilder.queue;
-import static dslab.util.CommandBuilder.subscribe;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BasicExchangeTest extends BaseSingleBrokerTest {
@@ -103,7 +103,7 @@ public class BasicExchangeTest extends BaseSingleBrokerTest {
 
         subscriber.sendCommandAndReadResponse(exchange("default", "default"));
         subscriber.sendCommandAndReadResponse(queue(queueName));
-        subscriber.sendCommandAndReadResponse(subscribe());
+        subscriber.sendCommandAndReadResponse(SUBSCRIBE);
 
         publisher.sendCommandAndReadResponse(exchange("default", "default"));
         publisher.publish(queueName, "VERIFICATION-MESSAGE-1");
@@ -120,7 +120,7 @@ public class BasicExchangeTest extends BaseSingleBrokerTest {
 
         subscriber.sendCommandAndReadResponse(exchange("default", "default"));
         subscriber.sendCommandAndReadResponse(queue(queueName));
-        subscriber.sendCommandAndReadResponse(subscribe());
+        subscriber.sendCommandAndReadResponse(SUBSCRIBE);
 
         publisher.sendCommandAndReadResponse(exchange("default", "default"));
         publisher.publish("invalid.key", "THIS-SHOULD-BE-DISCARDED");
@@ -155,7 +155,7 @@ public class BasicExchangeTest extends BaseSingleBrokerTest {
         subscriber.sendCommandAndReadResponse(exchange("fanout", exchangeName));
         subscriber.sendCommandAndReadResponse(queue(queueName));
         subscriber.sendCommandAndReadResponse(bind("none"));
-        subscriber.sendCommandAndReadResponse(exit());
+        subscriber.sendCommandAndReadResponse(EXIT);
         subscriber.disconnect();
 
         subscriber.connectAndReadResponse();

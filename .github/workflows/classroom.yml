@@ -2,6 +2,8 @@ name: DSLab Autograding Workflow
 
 'on':
   push:
+    paths-ignore:
+      - DSlab_2024_Assignment_3.pdf
     branches:
       - main
 

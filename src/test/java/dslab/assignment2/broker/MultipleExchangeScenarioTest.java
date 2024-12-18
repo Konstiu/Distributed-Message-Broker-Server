@@ -9,10 +9,10 @@ import org.junit.jupiter.api.Timeout;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import static dslab.util.CommandBuilder.SUBSCRIBE;
 import static dslab.util.CommandBuilder.bind;
 import static dslab.util.CommandBuilder.exchange;
 import static dslab.util.CommandBuilder.queue;
-import static dslab.util.CommandBuilder.subscribe;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MultipleExchangeScenarioTest extends BaseSingleBrokerTest {
@@ -77,7 +77,7 @@ public class MultipleExchangeScenarioTest extends BaseSingleBrokerTest {
         sub2.sendCommandAndReadResponse(bind(key1));
         sub2.sendCommandAndReadResponse(queue(queue2Name));
         sub2.sendCommandAndReadResponse(bind(key2));
-        sub2.sendCommandAndReadResponse(subscribe());
+        sub2.sendCommandAndReadResponse(SUBSCRIBE);
 
         pub1.sendCommandAndReadResponse(exchange("direct", "direct-1"));
         pub2.sendCommandAndReadResponse(exchange("topic", "topic-1"));

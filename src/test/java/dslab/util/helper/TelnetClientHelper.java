@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import static dslab.util.CommandBuilder.SUBSCRIBE;
 import static org.awaitility.Awaitility.await;
 
 public class TelnetClientHelper {
@@ -87,20 +88,20 @@ public class TelnetClientHelper {
         sendCommandAndReadResponse(CommandBuilder.publish(routingKey, msg));
     }
 
-    public String publish(String routingKey, String msg) throws IOException {
-        return sendCommandAndReadResponse(CommandBuilder.publish(routingKey, msg));
+    public void publish(String routingKey, String msg) throws IOException {
+        sendCommandAndReadResponse(CommandBuilder.publish(routingKey, msg));
     }
 
     public void subscribe(String exchangeName, String exchangeType, String queueName, String ... bindingKeys) throws IOException {
         sendCommandAndReadResponse(CommandBuilder.exchange(exchangeType, exchangeName));
         sendCommandAndReadResponse(CommandBuilder.queue(queueName));
         for (String bindingKey : bindingKeys) sendCommandAndReadResponse(CommandBuilder.bind(bindingKey));
-        sendCommandAndReadResponse(CommandBuilder.subscribe());
+        sendCommandAndReadResponse(SUBSCRIBE);
     }
 
     public void subscribe(String queueName) throws IOException {
         sendCommandAndReadResponse(CommandBuilder.queue(queueName));
-        sendCommandAndReadResponse(CommandBuilder.subscribe());
+        sendCommandAndReadResponse(SUBSCRIBE);
     }
 
 }

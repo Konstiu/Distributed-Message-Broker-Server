@@ -1,11 +1,11 @@
 package dslab.assignment3.election.raft;
 
 import dslab.assignment3.election.base.BaseElectionIntegrationTest;
-import dslab.util.grading.annotations.GitHubClassroomGrading;
 import dslab.broker.IBroker;
 import dslab.config.BrokerConfig;
 import dslab.util.election.ElectionUtil;
 import dslab.util.grading.LocalGradingExtension;
+import dslab.util.grading.annotations.GitHubClassroomGrading;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;

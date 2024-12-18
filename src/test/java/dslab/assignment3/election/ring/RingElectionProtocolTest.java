@@ -12,11 +12,11 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import static dslab.util.CommandBuilder.OK;
+import static dslab.util.CommandBuilder.PING;
+import static dslab.util.CommandBuilder.PONG;
 import static dslab.util.CommandBuilder.declare;
 import static dslab.util.CommandBuilder.elect;
-import static dslab.util.CommandBuilder.ok;
-import static dslab.util.CommandBuilder.ping;
-import static dslab.util.CommandBuilder.pong;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -48,7 +48,7 @@ public class RingElectionProtocolTest extends BaseElectionProtocolTest {
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void ring_protocol_elect_successfully() throws IOException {
         sender.connectAndReadResponse();
-        assertEquals(ok(), sender.sendCommandAndReadResponse(elect(10)));
+        assertEquals(OK, sender.sendCommandAndReadResponse(elect(10)));
     }
 
     @GitHubClassroomGrading(maxScore = 2)
@@ -91,6 +91,6 @@ public class RingElectionProtocolTest extends BaseElectionProtocolTest {
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     void ring_protocol_ping_successfully() throws IOException {
         sender.connectAndReadResponse();
-        assertEquals(pong(), sender.sendCommandAndReadResponse(ping()));
+        assertEquals(PONG, sender.sendCommandAndReadResponse(PING));
     }
 }
