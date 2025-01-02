@@ -101,11 +101,13 @@ public class ElectionServer implements Runnable {
 
     public void shutdown() {
         try {
-            serverSocket.close();
+            if (serverSocket!= null)
+                serverSocket.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        executor.shutdown();
+        if (executor != null)
+            executor.shutdown();
         for (ElectionServerConnectionHandler handler : handlers) {
             handler.shutdown();
         }
