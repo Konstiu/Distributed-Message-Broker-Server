@@ -21,6 +21,7 @@ public class Broker implements IBroker {
     private volatile boolean running = true;
     private List<Socket> sockets = new ArrayList<>();
     private ElectionServer election;
+    private Thread electionThread;
 
     public Broker(BrokerConfig config) {
         this.config = config;
@@ -30,7 +31,7 @@ public class Broker implements IBroker {
     public void run() {
         try {
             this.election = new ElectionServer(config);
-            Thread.startVirtualThread(this.election);
+            electionThread = Thread.startVirtualThread(this.election);
 
             dnsClient = Thread.startVirtualThread(new DNSClient(config));
             executor = Executors.newVirtualThreadPerTaskExecutor();
@@ -89,6 +90,7 @@ public class Broker implements IBroker {
             }
         }
         this.election.shutdown();
+        electionThread.interrupt();
     }
 
     public static void main(String[] args) {

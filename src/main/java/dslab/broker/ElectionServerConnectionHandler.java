@@ -40,11 +40,21 @@ public class ElectionServerConnectionHandler implements Runnable {
             String[] parts = line.split(" ");
             switch (parts[0]) {
                 case "elect":
+                    if (parts.length != 2) {
+                        out.write("error usage: elect <id>\n".getBytes());
+                        out.flush();
+                        return;
+                    }
                     out.write("ok\n".getBytes());
                     out.flush();
                     handleElection(Integer.parseInt(parts[1]));
                     break;
                 case "declare":
+                    if (parts.length != 2) {
+                        out.write("error usage: declare <id>\n".getBytes());
+                        out.flush();
+                        return;
+                    }
                     out.write(("ack " + config.electionId() + "\n").getBytes());
                     out.flush();
                     handleDeclare(Integer.parseInt(parts[1]));
@@ -119,6 +129,7 @@ public class ElectionServerConnectionHandler implements Runnable {
                 }
             }
             if (socket == null) {
+                leader.set(config.electionId());
                 return true;
             }
             OutputStream out = socket.getOutputStream();
@@ -146,7 +157,7 @@ public class ElectionServerConnectionHandler implements Runnable {
 
         if (id == this.config.electionId()) {
             connectToDNS();
-            executorService.submit(new ElectionHeartbeat(socket, this.socket, Thread.currentThread()));
+            executorService.submit(new ElectionHeartbeat(socket, this.socket));
         } else {
             if (sendElectionMessage("declare " + id))
                 System.out.println("Error");

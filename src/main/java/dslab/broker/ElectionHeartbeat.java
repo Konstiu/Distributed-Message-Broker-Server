@@ -10,12 +10,10 @@ import java.util.Objects;
 public class ElectionHeartbeat implements Runnable {
     private final Socket socket1;
     private final Socket socket2;
-    private final Thread Election;
 
-    public ElectionHeartbeat(Socket socket1, Socket socket2, Thread Election) throws IOException {
+    public ElectionHeartbeat(Socket socket1, Socket socket2) throws IOException {
         this.socket2 = socket2;
         this.socket1 = socket1;
-        this.Election = Election;
     }
 
     @Override
@@ -42,7 +40,7 @@ public class ElectionHeartbeat implements Runnable {
                     out2.write("pong\n".getBytes());
                     out2.flush();
                 }
-                Thread.sleep(500);
+                Thread.sleep(40);
             }
         } catch (Exception ignored) {}
     }
