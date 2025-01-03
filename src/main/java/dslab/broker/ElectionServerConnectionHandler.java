@@ -32,15 +32,14 @@ public class ElectionServerConnectionHandler implements Runnable {
             out.flush();
 
             String line = in.readLine();
-            if (line == null || !line.equals("ok")) {
+            System.out.println(line);
+            if (line == null) {
                 socket.close();
                 return;
             }
-            line = in.readLine();
             String[] parts = line.split(" ");
-            System.out.print(!line.equals("ping") ? line + "\n" : "");
             switch (parts[0]) {
-                case "election":
+                case "elect":
                     out.write("ok\n".getBytes());
                     out.flush();
                     handleElection(Integer.parseInt(parts[1]));
@@ -76,8 +75,6 @@ public class ElectionServerConnectionHandler implements Runnable {
             System.out.println("Error");
             return;
         }
-        out.write(("ok\n").getBytes());
-        out.flush();
         out.write(("ping\n").getBytes());
         out.flush();
         message = in.readLine();
@@ -98,11 +95,11 @@ public class ElectionServerConnectionHandler implements Runnable {
             }
 
         } else if (id > this.config.electionId()) {
-            if (sendElectionMessage("election " + id)){
+            if (sendElectionMessage("elect " + id)){
                 System.out.println("Error");
             }
         } else {
-            if (sendElectionMessage("election " + config.electionId())){
+            if (sendElectionMessage("elect " + config.electionId())){
                 System.out.println("Error");
             }
         }
@@ -131,10 +128,6 @@ public class ElectionServerConnectionHandler implements Runnable {
             if (message == null || !message.equals("ok LEP")) {
                 return true;
             }
-
-            out.write("ok\n".getBytes());
-            out.flush();
-
             out.write((command + "\n").getBytes());
             out.flush();
 

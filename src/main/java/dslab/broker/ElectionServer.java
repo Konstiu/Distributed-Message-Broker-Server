@@ -62,9 +62,7 @@ public class ElectionServer implements Runnable {
                         System.out.println("Error");
                         return;
                     }
-                    out.write("ok\n".getBytes());
-                    out.flush();
-                    out.write(("election " + config.electionId() + "\n").getBytes());
+                    out.write(("elect " + config.electionId() + "\n").getBytes());
                     out.flush();
                     break;
                 } catch (IOException ignored) {}
@@ -97,6 +95,25 @@ public class ElectionServer implements Runnable {
 
     public int getLeader() {
         return this.leaderId.get();
+    }
+
+    public void initiateElection(){
+        for (int i = 0; i < config.electionPeerIds().length; i++) {
+            try {
+                Socket socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
+                BufferedReader in = new BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
+                OutputStream out = socket.getOutputStream();
+                String message = in.readLine();
+                if (message == null || !message.equals("ok LEP")) {
+                    socket.close();
+                    System.out.println("Error");
+                    return;
+                }
+                out.write(("elect " + config.electionId() + "\n").getBytes());
+                out.flush();
+                break;
+            } catch (IOException ignored) {}
+        }
     }
 
     public void shutdown() {

@@ -63,7 +63,7 @@ public class Broker implements IBroker {
 
     @Override
     public void initiateElection() {
-
+        this.election.initiateElection();
     }
 
     @Override
