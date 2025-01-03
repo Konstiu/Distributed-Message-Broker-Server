@@ -90,7 +90,7 @@ public class Broker implements IBroker {
             }
         }
         this.election.shutdown();
-        electionThread.interrupt();
+        //electionThread.interrupt();
     }
 
     public static void main(String[] args) {

@@ -129,7 +129,6 @@ public class ElectionServerConnectionHandler implements Runnable {
                 }
             }
             if (socket == null) {
-                leader.set(config.electionId());
                 return true;
             }
             OutputStream out = socket.getOutputStream();
@@ -154,6 +153,7 @@ public class ElectionServerConnectionHandler implements Runnable {
 
     private void handleDeclare(int id) throws IOException {
         this.leader.set(id);
+        System.out.println("Leader is now: " + id);
 
         if (id == this.config.electionId()) {
             connectToDNS();
