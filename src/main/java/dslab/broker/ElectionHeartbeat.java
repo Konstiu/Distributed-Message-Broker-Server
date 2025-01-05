@@ -44,4 +44,12 @@ public class ElectionHeartbeat implements Runnable {
             }
         } catch (Exception ignored) {}
     }
+    public void shutdown(){
+        try {
+            socket1.close();
+            socket2.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

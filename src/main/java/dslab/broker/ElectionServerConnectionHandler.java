@@ -14,6 +14,7 @@ public class ElectionServerConnectionHandler implements Runnable {
     private AtomicInteger leader;
     private ExecutorService executorService;
     private volatile boolean running = true;
+    private ElectionHeartbeat electionHeartbeat;
 
     public ElectionServerConnectionHandler(Socket socket, BrokerConfig config, AtomicInteger leader) {
         this.socket = socket;
@@ -62,7 +63,6 @@ public class ElectionServerConnectionHandler implements Runnable {
                 case "ping":
                     out.write("pong\n".getBytes());
                     out.flush();
-                    Thread.sleep(50);
                     sendPing();
                     break;
             }
@@ -153,11 +153,10 @@ public class ElectionServerConnectionHandler implements Runnable {
 
     private void handleDeclare(int id) throws IOException {
         this.leader.set(id);
-        System.out.println("Leader is now: " + id);
-
         if (id == this.config.electionId()) {
             connectToDNS();
-            executorService.submit(new ElectionHeartbeat(socket, this.socket));
+            electionHeartbeat = new ElectionHeartbeat(socket, this.socket);
+            executorService.submit(electionHeartbeat);
         } else {
             if (sendElectionMessage("declare " + id))
                 System.out.println("Error");
@@ -191,6 +190,8 @@ public class ElectionServerConnectionHandler implements Runnable {
 
     public void shutdown() {
         running = false;
+        if (electionHeartbeat != null)
+            electionHeartbeat.shutdown();
         executorService.shutdown();
     }
 
