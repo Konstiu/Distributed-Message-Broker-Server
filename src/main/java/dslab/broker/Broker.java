@@ -75,6 +75,8 @@ public class Broker implements IBroker {
     @Override
     public void shutdown() {
         running = false;
+        this.election.shutdown();
+        electionThread.interrupt();
         try {
             serverSocket.close();
         } catch (Exception e) {
@@ -89,8 +91,6 @@ public class Broker implements IBroker {
                 throw new RuntimeException(e);
             }
         }
-        this.election.shutdown();
-        //electionThread.interrupt();
     }
 
     public static void main(String[] args) {
