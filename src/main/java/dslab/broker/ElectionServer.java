@@ -64,6 +64,7 @@ public class ElectionServer implements Runnable {
                     }
                     out.write(("elect " + config.electionId() + "\n").getBytes());
                     out.flush();
+                    in.readLine();
                     socket.close();
                     break;
                 } catch (IOException ignored) {}

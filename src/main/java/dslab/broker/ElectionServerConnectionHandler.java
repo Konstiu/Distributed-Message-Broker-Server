@@ -33,7 +33,6 @@ public class ElectionServerConnectionHandler implements Runnable {
             out.flush();
 
             String line = in.readLine();
-            System.out.println(line);
             if (line == null) {
                 socket.close();
                 return;
@@ -63,7 +62,7 @@ public class ElectionServerConnectionHandler implements Runnable {
                 case "ping":
                     out.write("pong\n".getBytes());
                     out.flush();
-                    sendPing();
+                    //sendPing();
                     break;
             }
 
@@ -75,41 +74,46 @@ public class ElectionServerConnectionHandler implements Runnable {
         }
     }
 
-    private void sendPing() throws IOException {
-        Socket socket = new Socket(config.electionPeerHosts()[0], config.electionPeerPorts()[0]);
-        OutputStream out = socket.getOutputStream();
-        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        String message = in.readLine();
-        if (message == null || !message.equals("ok LEP")) {
-            socket.close();
-            System.out.println("Error");
-            return;
-        }
-        out.write(("ping\n").getBytes());
-        out.flush();
-        message = in.readLine();
-        if (message == null || !message.equals("pong")) {
-            System.out.println("Error");
-            socket.close();
-            return;
-        }
-        socket.close();
-    }
+//    public void sendPing() throws IOException {
+//        for (int i = 0; i < config.electionPeerIds().length; i++) {
+//            Socket socket = new Socket(config.electionPeerHosts()[0], config.electionPeerPorts()[0]);
+//            OutputStream out = socket.getOutputStream();
+//            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+//            String message = in.readLine();
+//
+//            if (message == null || !message.equals("ok LEP")) {
+//                socket.close();
+//                System.out.println("Error");
+//                return;
+//            }
+//            out.write(("ping\n").getBytes());
+//            out.flush();
+//            message = in.readLine();
+//            if (message == null || !message.equals("pong")) {
+//                System.out.println("Error");
+//                socket.close();
+//                return;
+//            }
+//        }
+//
+//    }
 
 
     private void handleElection(int id) throws IOException {
         if (id == this.config.electionId()) {
             this.leader.set(id);
-            if (sendElectionMessage("declare " + id)){
+            if (sendElectionMessage("declare " + id)) {
                 System.out.println("Error");
+            } else {
+                sendOnlyPing();
             }
 
         } else if (id > this.config.electionId()) {
-            if (sendElectionMessage("elect " + id)){
+            if (sendElectionMessage("elect " + id)) {
                 System.out.println("Error");
             }
         } else {
-            if (sendElectionMessage("elect " + config.electionId())){
+            if (sendElectionMessage("elect " + config.electionId())) {
                 System.out.println("Error");
             }
         }
@@ -193,6 +197,57 @@ public class ElectionServerConnectionHandler implements Runnable {
         if (electionHeartbeat != null)
             electionHeartbeat.shutdown();
         executorService.shutdown();
+        try {
+            socket.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void sendOnlyPing() throws IOException {
+        for (int i = 0; i < 2; i++){
+            Socket socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
+            OutputStream out = socket.getOutputStream();
+            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            String message = in.readLine();
+            if (message == null || !message.equals("ok LEP")) {
+                socket.close();
+                System.out.println("Error");
+                return;
+            }
+            out.write(("ping\n").getBytes());
+            out.flush();
+            message = in.readLine();
+            if (message == null || !message.equals("pong")) {
+                System.out.println("Error");
+                socket.close();
+                return;
+            }
+            socket.close();
+        }
+//        Socket socket = new Socket(config.electionPeerHosts()[1], config.electionPeerPorts()[1]);
+//        OutputStream out = socket.getOutputStream();
+//        BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+//        String message = "";
+//
+//
+//
+//        message = in.readLine();
+//        System.out.println(message + " ----- ");
+//        if (Objects.equals(message, "ok LEP")){
+//            System.out.println("noError");
+//        }
+//        out.flush();
+//        out.write(("ping\n").getBytes());
+//        message = in.readLine();
+//        System.out.println(message + " ---2-- ");
+////        if (message == null || !message.equals("pong")) {
+////            System.out.println("Error");
+////            socket.close();
+////            return;
+////        }
+
+
     }
 
 }
