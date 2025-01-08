@@ -22,6 +22,8 @@ public class ElectionServer implements Runnable {
     private List<ElectionServerConnectionHandler> handlers = new ArrayList<>();
     private final AtomicInteger leaderId = new AtomicInteger(-1);
 
+    private int voteCounter;
+
 
     public ElectionServer(BrokerConfig config) {
         this.config = config;
@@ -29,8 +31,7 @@ public class ElectionServer implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("start");
-        if (this.config.electionType() == "none") {
+        if (Objects.equals(this.config.electionType(), "none")) {
             return;
         }
 
@@ -53,29 +54,37 @@ public class ElectionServer implements Runnable {
 
             Socket socket = null;
             boolean isLeader = true;
-            for (int i = 0; i < config.electionPeerIds().length; i++) {
-                if (Objects.equals(this.config.electionType(), "bully") && this.config.electionId() > config.electionPeerIds()[i]) {
-                    continue;
-                }
-                if (connectToSocketAndSendMessage("elect " + config.electionId(), i)) {
-                    if (Objects.equals(this.config.electionType(), "bully")) {
-                        isLeader = false;
+                for (int i = 0; i < config.electionPeerIds().length; i++) {
+                    if (Objects.equals(this.config.electionType(), "bully") && this.config.electionId() > config.electionPeerIds()[i]) {
                         continue;
                     }
-                    break;
+                    if (connectToSocketAndSendMessage("elect " + config.electionId(), i)) {
+                        if (Objects.equals(this.config.electionType(), "bully")) {
+                            isLeader = false;
+                            continue;
+                        }
+                        if (config.electionType().equals("raft")) {
+                            continue;
+                        }
+                        break;
+                    }
                 }
-            }
 
-            if (isLeader && Objects.equals(this.config.electionType(), "bully")) {
+
+            if ((isLeader && Objects.equals(this.config.electionType(), "bully")) ||  (config.electionType().equals("raft") &&voteCounter > config.electionPeerIds().length / 2)) {
                 leaderId.set(config.electionId());
                 connectToDNS();
                 for (int i = 0; i < config.electionPeerIds().length; i++) {
                     connectToSocketAndSendMessage("declare " + config.electionId(), i);
                 }
                 for (ElectionServerConnectionHandler handler : handlers) {
-                    try {handler.sendOnlyPing();} catch (Exception ignored) {}
+                    try {
+                        handler.sendOnlyPing();
+                    } catch (Exception ignored) {
+                    }
                 }
             }
+            voteCounter = 0;
 
         } catch (IOException ignored) {
             if (serverSocket.isClosed()) {
@@ -106,6 +115,7 @@ public class ElectionServer implements Runnable {
     }
 
     public void initiateElection() {
+        this.voteCounter = 0;
         if (Objects.equals(this.config.electionType(), "bully")) {
             boolean isLeader = true;
             for (int i = 0; i < config.electionPeerIds().length; i++) {
@@ -121,14 +131,32 @@ public class ElectionServer implements Runnable {
                     }
                 }
                 for (ElectionServerConnectionHandler handler : handlers) {
-                    try {handler.sendOnlyPing();} catch (Exception ignored) {}
+                    try {
+                        handler.sendOnlyPing();
+                    } catch (Exception ignored) {
+                    }
                 }
             }
             return;
         }
         for (int i = 0; i < config.electionPeerIds().length; i++) {
             if (connectToSocketAndSendMessage("elect " + config.electionId(), i)) {
+                if (config.electionType().equals("raft")) {
+                    continue;
+                }
                 break;
+            }
+        }
+        if (voteCounter > config.electionPeerIds().length / 2) {
+            leaderId.set(config.electionId());
+            for (int j = 0; j < config.electionPeerIds().length; j++) {
+                connectToSocketAndSendMessage("declare " + config.electionId(), j);
+            }
+            for (ElectionServerConnectionHandler handler : handlers) {
+                try {
+                    handler.sendOnlyPing();
+                } catch (Exception ignored) {
+                }
             }
         }
     }
@@ -142,7 +170,7 @@ public class ElectionServer implements Runnable {
             String message = in.readLine();
             if (message == null || !message.equals("ok LEP")) {
                 socket.close();
-                System.out.println("Error");
+                System.out.println("Error - no LEP");
                 return false;
             }
             out.write((command + "\n").getBytes());
@@ -150,8 +178,18 @@ public class ElectionServer implements Runnable {
             message = in.readLine();
             if (message == null || (!message.equals("ok") && !message.startsWith("ack") && !message.startsWith("vote"))) {
                 socket.close();
-                System.out.println("Error");
+                System.out.println("Error - no ok/ack/vote");
                 return false;
+            }
+
+
+            if (config.electionType().equals("raft") && message.startsWith("vote")) {
+                if (Integer.parseInt(message.split(" ")[2]) == config.electionId()) {
+                    voteCounter++;
+                }
+                if (voteCounter > config.electionPeerIds().length / 2) {
+                    leaderId.set(config.electionId());
+                }
             }
 
             socket.close();
@@ -167,14 +205,14 @@ public class ElectionServer implements Runnable {
         return false;
     }
 
-    private void connectToDNS(){
+    private void connectToDNS() {
         Socket socket = null;
         try {
             socket = new Socket(config.dnsHost(), config.dnsPort());
             OutputStream out = socket.getOutputStream();
             ElectionServerConnectionHandler.connectToDNS(socket, out, config);
-        } catch (Exception ex) {
-            throw new RuntimeException(ex);
+        } catch (Exception ignroed) {
+            //throw new RuntimeException(ex);
         }
     }
 

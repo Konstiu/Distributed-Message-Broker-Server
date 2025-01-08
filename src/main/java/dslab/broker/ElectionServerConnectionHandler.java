@@ -1,5 +1,6 @@
 package dslab.broker;
 
+import dslab.broker.enums.ElectionState;
 import dslab.config.BrokerConfig;
 
 import java.io.*;
@@ -15,6 +16,9 @@ public class ElectionServerConnectionHandler implements Runnable {
     private ExecutorService executorService;
     private volatile boolean running = true;
     private ElectionHeartbeat electionHeartbeat;
+    private int raftVote;
+
+    private ElectionState state = ElectionState.FOLLOWER;
 
     public ElectionServerConnectionHandler(Socket socket, BrokerConfig config, AtomicInteger leader) {
         this.socket = socket;
@@ -45,12 +49,14 @@ public class ElectionServerConnectionHandler implements Runnable {
                         out.flush();
                         return;
                     }
-                    out.write("ok\n".getBytes());
-                    out.flush();
+                    if (!this.config.electionType().equals("raft")) {
+                        out.write("ok\n".getBytes());
+                        out.flush();
+                    }
                     switch (this.config.electionType()) {
                         case "ring" -> handleElectionRing(Integer.parseInt(parts[1]));
                         case "bully" -> handleElectionBully(Integer.parseInt(parts[1]));
-                        case "raft" -> handleElectionRing(Integer.parseInt(parts[1]));//handleElectionRaft(Integer.parseInt(parts[1]));
+                        case "raft" -> handleElectionRaft(Integer.parseInt(parts[1]), out);
                     }
                     break;
                 case "declare":
@@ -64,8 +70,7 @@ public class ElectionServerConnectionHandler implements Runnable {
                     out.flush();
                     switch (this.config.electionType()) {
                         case "ring" -> handleDeclareRing(Integer.parseInt(parts[1]));
-                        case "bully" -> handleDeclareBully(Integer.parseInt(parts[1]));
-                        case "raft" -> handleDeclareRing(Integer.parseInt(parts[1]));//handleDeclareRaft(Integer.parseInt(parts[1]));
+                        case "bully", "raft" -> this.leader.set(Integer.parseInt(parts[1]));
                     }
                     break;
                 case "ping":
@@ -76,60 +81,59 @@ public class ElectionServerConnectionHandler implements Runnable {
 
         } catch (Exception e) {
             if (running) {
-                System.out.println("Error1");
                 throw new RuntimeException(e);
             }
         }
     }
 
-    private void handleDeclareRaft(int id) {
-
-    }
-
-    private void handleDeclareBully(int id) {
-        this.leader.set(id);
-    }
-
-    private void handleElectionRaft(int id) {
-
+    private void handleElectionRaft(int id, OutputStream out) throws IOException {
+        if (state == ElectionState.CANDIDATE) {
+            out.write(("vote " + config.electionId() + " " + raftVote + "\n").getBytes());
+            out.flush();
+            return;
+        }
+        this.state = ElectionState.CANDIDATE;
+        out.write(("vote " + config.electionId() + " " + id + "\n").getBytes());
+        out.flush();
+        this.raftVote = id;
     }
 
     private void handleElectionBully(int id) {
-        //System.out.println("Election Bully " + id);
-        if (id > this.config.electionId()){
+        if (id > this.config.electionId()) {
             return;
         }
-        System.out.println("Election Bully " + id);
         sendToAllBully("elect " + config.electionId());
     }
 
-    private void sendToAllBully(String command){
+    private void sendToAllBully(String command) {
         boolean isLeader = true;
         for (int i = 0; i < config.electionPeerIds().length; i++) {
             if (config.electionId() > config.electionPeerIds()[i]) {
                 continue;
             }
-            if (connectToSocketAndSendCommand(command, i)){
+            if (connectToSocketAndSendCommand(command, i)) {
                 isLeader = false;
             }
         }
-        if (isLeader){
+        if (isLeader) {
             this.leader.set(config.electionId());
             for (int i = 0; i < config.electionPeerIds().length; i++) {
                 connectToSocketAndSendCommand("declare " + config.electionId(), i);
             }
-            try{
+            try {
                 sendOnlyPing();
                 connectToDNS();
                 electionHeartbeat = new ElectionHeartbeat(socket, this.socket);
                 executorService.submit(electionHeartbeat);
-            }catch (IOException e){
-                System.out.println("Error");
+            } catch (IOException e) {
+                if (running) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
 
-    private boolean connectToSocketAndSendCommand(String command, int i){
+    private boolean connectToSocketAndSendCommand(String command, int i) {
         Socket socket = null;
         try {
             socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
@@ -138,7 +142,7 @@ public class ElectionServerConnectionHandler implements Runnable {
             String message = in.readLine();
             if (message == null || !message.equals("ok LEP")) {
                 socket.close();
-                System.out.println("Error");
+                System.out.println("Error - no LEP");
                 return false;
             }
             out.write((command + "\n").getBytes());
@@ -146,7 +150,7 @@ public class ElectionServerConnectionHandler implements Runnable {
             message = in.readLine();
             if (message == null || (!message.equals("ok") && !message.startsWith("ack") && !message.startsWith("vote"))) {
                 socket.close();
-                System.out.println("Error");
+                System.out.println("Error - no ok/ack/vote");
                 return false;
             }
             socket.close();
@@ -166,20 +170,14 @@ public class ElectionServerConnectionHandler implements Runnable {
     private void handleElectionRing(int id) throws IOException {
         if (id == this.config.electionId()) {
             this.leader.set(id);
-            if (sendElectionMessage("declare " + id)) {
-                System.out.println("Error");
-            } else {
+            if (!sendElectionMessage("declare " + id)) {
                 sendOnlyPing();
             }
 
         } else if (id > this.config.electionId()) {
-            if (sendElectionMessage("elect " + id)) {
-                System.out.println("Error");
-            }
+            sendElectionMessage("elect " + id);
         } else {
-            if (sendElectionMessage("elect " + config.electionId())) {
-                System.out.println("Error");
-            }
+             sendElectionMessage("elect " + config.electionId()) ;
         }
     }
 
@@ -200,8 +198,7 @@ public class ElectionServerConnectionHandler implements Runnable {
             electionHeartbeat = new ElectionHeartbeat(socket, this.socket);
             executorService.submit(electionHeartbeat);
         } else {
-            if (sendElectionMessage("declare " + id))
-                System.out.println("Error");
+             sendElectionMessage("declare " + id);
         }
     }
 
@@ -247,21 +244,21 @@ public class ElectionServerConnectionHandler implements Runnable {
     }
 
     public void sendOnlyPing() throws IOException {
-        for (int i = 0; i < 2; i++){
+        for (int i = 0; i < 2; i++) {
             Socket socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
             OutputStream out = socket.getOutputStream();
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String message = in.readLine();
             if (message == null || !message.equals("ok LEP")) {
                 socket.close();
-                System.out.println("Error");
+                System.out.println("Error - no LEP");
                 return;
             }
             out.write(("ping\n").getBytes());
             out.flush();
             message = in.readLine();
             if (message == null || !message.equals("pong")) {
-                System.out.println("Error");
+                System.out.println("Error - no Pong");
                 socket.close();
                 return;
             }
