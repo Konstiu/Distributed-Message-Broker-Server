@@ -4,11 +4,9 @@ import dslab.config.BrokerConfig;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,90 +57,25 @@ public class ElectionServer implements Runnable {
                 if (Objects.equals(this.config.electionType(), "bully") && this.config.electionId() > config.electionPeerIds()[i]) {
                     continue;
                 }
-                try {
-                    socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
-                    BufferedReader in = new BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
-                    OutputStream out = socket.getOutputStream();
-                    String message = in.readLine();
-                    if (message == null || !message.equals("ok LEP")) {
-                        socket.close();
-                        System.out.println("Error");
-                        return;
-                    }
-                    out.write(("elect " + config.electionId() + "\n").getBytes());
-                    out.flush();
-                    in.readLine();
-                    socket.close();
+                if (connectToSocketAndSendMessage("elect " + config.electionId(), i)) {
                     if (Objects.equals(this.config.electionType(), "bully")) {
                         isLeader = false;
                         continue;
                     }
                     break;
-                } catch (IOException ignored) {
-                    if (socket != null) {
-                        try {
-                            socket.close();
-                        } catch (IOException ex) {
-                            throw new RuntimeException(ex);
-                        }
-                    }
                 }
             }
 
             if (isLeader && Objects.equals(this.config.electionType(), "bully")) {
                 leaderId.set(config.electionId());
-                try {
-                    socket = new Socket(config.dnsHost(), config.dnsPort());
-                    OutputStream out = socket.getOutputStream();
-                    BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                    if (!in.readLine().equals("ok SDP")) {
-                        out.write("Error connecting to DNS Server".getBytes());
-                        out.flush();
-                    }
-
-                    out.write(("register " + config.electionDomain() + " " + config.host() + ":" + config.port() + "\n").getBytes());
-                    out.flush();
-                    if (!in.readLine().equals("ok")) {
-                        out.write("Error registering with DNS Server".getBytes());
-                        out.flush();
-                    }
-                    out.close();
-                    in.close();
-                    socket.close();
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
+                connectToDNS();
                 for (int i = 0; i < config.electionPeerIds().length; i++) {
-                    try {
-                        socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
-                        BufferedReader in = new BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
-                        OutputStream out = socket.getOutputStream();
-                        String message = in.readLine();
-                        if (message == null || !message.equals("ok LEP")) {
-                            socket.close();
-                            System.out.println("Error");
-                            return;
-                        }
-                        out.write(("declare " + config.electionId() + "\n").getBytes());
-                        out.flush();
-                        socket.close();
-                    } catch (IOException ignored) {
-                        if (socket != null) {
-                            try {
-                                socket.close();
-                            } catch (IOException ex) {
-                                throw new RuntimeException(ex);
-                            }
-                        }
-                    }
+                    connectToSocketAndSendMessage("declare " + config.electionId(), i);
                 }
                 for (ElectionServerConnectionHandler handler : handlers) {
                     try {handler.sendOnlyPing();} catch (Exception ignored) {}
                 }
             }
-
-            System.out.println("finish");
-
 
         } catch (IOException ignored) {
             if (serverSocket.isClosed()) {
@@ -153,7 +86,6 @@ public class ElectionServer implements Runnable {
     }
 
     private void restartServer() {
-
         executor.submit(() -> {
             try {
                 this.serverSocket = new ServerSocket(config.electionPort());
@@ -178,69 +110,71 @@ public class ElectionServer implements Runnable {
             boolean isLeader = true;
             for (int i = 0; i < config.electionPeerIds().length; i++) {
                 if (this.config.electionId() < config.electionPeerIds()[i]) {
-                    try {
-                        Socket socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
-                        BufferedReader in = new BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
-                        OutputStream out = socket.getOutputStream();
-                        String message = in.readLine();
-                        if (message == null || !message.equals("ok LEP")) {
-                            socket.close();
-                            System.out.println("Error");
-                            return;
-                        }
-                        out.write(("elect " + config.electionId() + "\n").getBytes());
-                        out.flush();
-                        socket.close();
-                        isLeader = false;
-                    } catch (IOException ignored) {
-                    }
+                    connectToSocketAndSendMessage("elect " + config.electionId(), i);
+                    isLeader = false;
                 }
             }
             if (isLeader) {
                 for (int i = 0; i < config.electionPeerIds().length; i++) {
-                    try {
-                        Socket socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
-                        BufferedReader in = new BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
-                        OutputStream out = socket.getOutputStream();
-                        String message = in.readLine();
-                        if (message == null || !message.equals("ok LEP")) {
-                            socket.close();
-                            System.out.println("Error");
-                            return;
-                        }
-                        out.write(("declare " + config.electionId() + "\n").getBytes());
-                        out.flush();
-                        socket.close();
+                    if (connectToSocketAndSendMessage("declare " + config.electionId(), i)) {
                         leaderId.set(config.electionId());
-                    } catch (IOException ignored) {
                     }
                 }
-                for (int i = 0; i < handlers.size(); i++) {
-                    try {
-                        handlers.get(i).sendOnlyPing();
-                    } catch (Exception ignored) {
-                    }
+                for (ElectionServerConnectionHandler handler : handlers) {
+                    try {handler.sendOnlyPing();} catch (Exception ignored) {}
                 }
             }
             return;
         }
         for (int i = 0; i < config.electionPeerIds().length; i++) {
-            try {
-                Socket socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
-                BufferedReader in = new BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
-                OutputStream out = socket.getOutputStream();
-                String message = in.readLine();
-                if (message == null || !message.equals("ok LEP")) {
-                    socket.close();
-                    System.out.println("Error");
-                    return;
-                }
-                out.write(("elect " + config.electionId() + "\n").getBytes());
-                out.flush();
-                socket.close();
+            if (connectToSocketAndSendMessage("elect " + config.electionId(), i)) {
                 break;
-            } catch (IOException ignored) {
             }
+        }
+    }
+
+    private boolean connectToSocketAndSendMessage(String command, int i) {
+        Socket socket = null;
+        try {
+            socket = new Socket(config.electionPeerHosts()[i], config.electionPeerPorts()[i]);
+            BufferedReader in = new BufferedReader(new java.io.InputStreamReader(socket.getInputStream()));
+            OutputStream out = socket.getOutputStream();
+            String message = in.readLine();
+            if (message == null || !message.equals("ok LEP")) {
+                socket.close();
+                System.out.println("Error");
+                return false;
+            }
+            out.write((command + "\n").getBytes());
+            out.flush();
+            message = in.readLine();
+            if (message == null || (!message.equals("ok") && !message.startsWith("ack") && !message.startsWith("vote"))) {
+                socket.close();
+                System.out.println("Error");
+                return false;
+            }
+
+            socket.close();
+            return true;
+        } catch (IOException ignored) {
+            if (socket != null) {
+                try {
+                    socket.close();
+                } catch (IOException ignored2) {
+                }
+            }
+        }
+        return false;
+    }
+
+    private void connectToDNS(){
+        Socket socket = null;
+        try {
+            socket = new Socket(config.dnsHost(), config.dnsPort());
+            OutputStream out = socket.getOutputStream();
+            ElectionServerConnectionHandler.connectToDNS(socket, out, config);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
         }
     }
 
