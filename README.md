@@ -20,6 +20,8 @@ To ensure high availability and fault tolerance, the system includes a mechanism
 
 By distributing the workload across multiple brokers and implementing robust failure recovery mechanisms, this service provides a scalable and resilient messaging infrastructure for distributed applications.
 
+*Link to client application: [[https://github.com/Konstiu/Distributed-Message-Broker-Client](https://github.com/Konstiu/Distributed-Message-Broker-Client)]*
+
 ## Table of Contents
 - [General](#General)
 - [Protocols](#Protocols)
