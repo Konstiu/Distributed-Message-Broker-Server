@@ -18,8 +18,7 @@ concurrency:
 
 jobs:
   run-autograding-tests:
-    runs-on:
-      group: org/auto-grading-runners
+    runs-on: ubuntu-latest
     if: github.actor != 'github-classroom[bot]'
 
     steps:
